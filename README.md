@@ -6,7 +6,7 @@ __By Rocketseat__
 - Express
 - Typescript
 - Prisma
-  - Prsma Client
+  - Prisma Client
   - Prisma Studio
 - SQLite
 

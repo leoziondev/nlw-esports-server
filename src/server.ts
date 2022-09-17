@@ -1,8 +1,20 @@
-import express from 'express'
-import { PrismaClient } from '@prisma/client'
+import express from 'express';
+import cors from 'cors';
 
-const app = express()
-const prisma = new PrismaClient()
+import { PrismaClient } from '@prisma/client';
+import { convertHourToMinutes } from './utils/convert-hour-to-minutes';
+import { convertMinutesToHourString } from './utils/convert-minutes-to-hour-string';
+
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+// Permissão de Requisições de Domínios
+// app.use(cors({
+//   origin: 'https://seudominio.com.br'
+// }));
+
+const prisma = new PrismaClient();
 
 app.get('/games', async (request, response) => {
   const games = await prisma.game.findMany({
@@ -13,12 +25,28 @@ app.get('/games', async (request, response) => {
         }
       }
     }
-  })
+  });
 
   return response.json(games);
 });
-app.post('/ads', (request, response) => {
-  return response.status(201).json([]);
+app.post('/games/:id/ads', async (request, response) => {
+  const gameId = request.params.id;
+  const body = request.body;
+
+  const ad = await prisma.ad.create({
+    data: {
+      gameId,
+      name: body.name,
+      yearsPlaying: body.yearsPlaying,
+      discord: body.discord,
+      weekDays: body.weekDays.join(','),
+      hourStart: convertHourToMinutes(body.hourStart),
+      hourEnd: convertHourToMinutes(body.hourEnd),
+      useVoiceChannel: body.useVoiceChannel,
+    }
+  });
+
+  return response.status(201).json(ad);
 });
 
 app.get('/games/:id/ads', async (request, response) => {
@@ -40,12 +68,14 @@ app.get('/games/:id/ads', async (request, response) => {
     orderBy: {
       createdAt: 'desc'
     }
-  })
+  });
 
   return response.json(ads.map(ad => {
     return {
       ...ad,
-      weekDays: ad.weekDays.split(',')
+      weekDays: ad.weekDays.split(','),
+      hourStart: convertMinutesToHourString(ad.hourStart),
+      hourEnd: convertMinutesToHourString(ad.hourEnd),
     }
   }));
 });
@@ -60,11 +90,11 @@ app.get('/ads/:id/discord', async (request, response) => {
     where: {
       id: adsId
     }
-  })
+  });
 
   return response.json({
     discord: ad.discord
   });
 });
 
-app.listen(3333)
+app.listen(3333);
